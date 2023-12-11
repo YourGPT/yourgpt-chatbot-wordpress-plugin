@@ -1,5 +1,5 @@
 === YourGPT Chatbot ===
-Plugin Name:       YourGPT Chatbot
+Plugin Name:       Your AI Chatbot
 Plugin URI:        https://yourgpt.ai/chatbot
 Description:       ChatGPT chatbot for your WordPress Website. Take your WordPress Site to the next level with YourGPT Chatbot - 24/7 AI Assistant Chatbot for Customer Support!
 Version:           1.0.0

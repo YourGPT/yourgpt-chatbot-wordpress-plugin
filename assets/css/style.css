@@ -53,8 +53,8 @@
   border-color: #1a54e8;
 }
 
-.btn {
-  background-color: #1a54e8;
+.chatbotbtn {
+  background-color: #1a54e8 !important;
   color: white;
   border: none;
   border-radius: 5px;
@@ -64,7 +64,7 @@
   font-size: 1rem;
 }
 
-.btn:hover {
+.chatbotbtn:hover {
   background-color: #1341c8;
 }
 
