@@ -4,7 +4,7 @@ jQuery(function ($) {
         el.preventDefault();
         console.log("widget_uid",el.target.widget_uid.value);
         $.post(ajaxurl, {action: "my_ajax_form", widget_uid: el.target.widget_uid.value }, function (val) {
-            window.location.href = "http://localhost/wordpress/wp-admin/plugins.php";
+            window.location.href = "/wp-admin/plugins.php";
         })
     })
 
