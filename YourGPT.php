@@ -3,7 +3,7 @@
  * Plugin Name:       Your AI Chatbot
  * Plugin URI:        https://yourgpt.ai/chatbot
  * Description:       ChatGPT chatbot for your WordPress Website. Take your WordPress Site to the next level with AI Chatbot - 24/7 AI Assistant Chatbot for Customer Support!
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 5.2
  * Requires PHP:      7.2
  * Author:            YourGPT Team
@@ -51,15 +51,18 @@ function my_admin_js_script()
 }
 function add_html_script_to_admin()
 {
-    echo '<script
-    id="yourgpt-chatbot"
-    widget="' . esc_js(get_option("widget_uid")) . '">
-    window.onload =(function(){
-        const sc=document.createElement("script");
-        sc.src="https://widget.yourgpt.ai/script.js" 
-        document.body.appendChild(sc);
-    });
+    echo '<script>
+  window.YGC_WIDGET_ID="'.esc_js(get_option("widget_uid")).'";
+  (function(){
+    var script=document.createElement("script");
+    script.src="https://widget.yourgpt.ai/script.js";
+    script.id="yourgpt-chatbot";
+    document.body.appendChild(script);
+  })();
   </script>';
+
+ 
+  
 }
 
 add_action('admin_enqueue_scripts', 'add_html_script_to_admin');
