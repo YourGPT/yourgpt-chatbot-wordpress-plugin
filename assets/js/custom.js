@@ -1,74 +1,196 @@
 jQuery(function ($) {
-    // Get ajaxurl from localized script or use WordPress default
     var ajaxurl = getOption.ajaxurl || window.ajaxurl || '/wp-admin/admin-ajax.php';
 
+    // --- Settings form ---------------------------------------------------
+
+    var uidError = $('#widgetUID-error');
+
+    function showFieldError(message) {
+        $('#widgetUID').addClass('is-invalid').focus();
+        uidError.text(message).prop('hidden', false);
+    }
+
+    function clearFieldError() {
+        $('#widgetUID').removeClass('is-invalid');
+        uidError.text('').prop('hidden', true);
+    }
+
+    $('#widgetUID')
+        .on('blur change', function () {
+            this.value = this.value.trim();
+        })
+        .on('input', clearFieldError);
+
     $('#ajax_form').on('submit', function (e) {
-        e.preventDefault(); // Always prevent default form submission
+        e.preventDefault();
 
-        console.log('=== FORM SUBMIT START ===');
-
-        // Get the form element
         var form = e.target;
+        var uidField = $('#widgetUID');
+        var widgetUid = (uidField.val() || '').trim();
 
-        // Collect all form data
+        $('.ygc-notice').remove();
+
+        if (!widgetUid) {
+            showFieldError('Widget UID is required.');
+            return;
+        }
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(widgetUid)) {
+            showFieldError('Invalid Widget UID. Copy it from YourGPT Dashboard \u2192 Integrations.');
+            return;
+        }
+        clearFieldError();
+
         var formData = {
             action: "save_ygc_settings_ajax",
             nonce: $('#ygc_settings_nonce').val(),
-            widget_uid: form.widget_uid ? form.widget_uid.value : '',
-            chatbot_admin_enabled: form.chatbot_admin_enabled && form.chatbot_admin_enabled.checked ? '1' : '0',
-            search_widget_id: form.search_widget_id ? form.search_widget_id.value : '',
-            search_widget_type: form.search_widget_type ? form.search_widget_type.value : 'floating',
-            search_admin_enabled: form.search_admin_enabled && form.search_admin_enabled.checked ? '1' : '0'
+            widget_uid: widgetUid,
+            chatbot_admin_enabled: form.chatbot_admin_enabled && form.chatbot_admin_enabled.checked ? '1' : '0'
         };
 
-        console.log('Form Data:', formData);
-        console.log('AJAX URL:', ajaxurl);
+        var submitButton = $(e.originalEvent && e.originalEvent.submitter || $(form).find('button[type="submit"]').first());
+        // The button holds an icon plus a label span; only swap the label.
+        var buttonLabel = submitButton.find('span').last();
+        if (!buttonLabel.length) {
+            buttonLabel = submitButton;
+        }
+        var originalButtonText = buttonLabel.text();
 
-        // Show loading state - find the submit button that was clicked
-        var submitButton = $(e.originalEvent.submitter || $(form).find('button[type="submit"]:visible').first());
-        var originalButtonText = submitButton.text();
-        submitButton.prop('disabled', true).text('Saving...');
+        submitButton.prop('disabled', true);
+        buttonLabel.text('Saving...');
 
-        // Remove any existing notices
-        $('.ygc-notice').remove();
-
-        // Send AJAX request
         $.post(ajaxurl, formData, function (response) {
-            console.log('Response:', response);
-
             if (response.success) {
-                console.log('Saved values:', response.data.saved_values);
-                console.log('✅ Settings saved successfully!');
+                buttonLabel.text('Saved! Reloading...');
 
-                // Update button to show success state
-                submitButton.text('✓ Saved! Reloading...').css({
-                    'background': '#46b450',
-                    'border-color': '#46b450'
-                });
-
-                // Show success message briefly before reload
-                var successHtml = '<div class="ygc-notice notice notice-success is-dismissible" style="margin: 20px 0;"><p>' + response.data.message + '</p></div>';
-                $('#ajax_form').before(successHtml);
-
-                // Scroll to top to show the success message
+                $('#ajax_form').before(
+                    '<div class="ygc-notice notice notice-success is-dismissible"><p>' + response.data.message + '</p></div>'
+                );
                 $('html, body').animate({ scrollTop: 0 }, 300);
 
-                // Reload page after 1.5 seconds to show the success message
-                setTimeout(function() {
+                setTimeout(function () {
                     window.location.reload();
                 }, 1500);
             } else {
-                // Show error message
-                submitButton.prop('disabled', false).text(originalButtonText);
-                var errorHtml = '<div class="ygc-notice notice notice-error is-dismissible" style="margin: 20px 0;"><p>' + response.data.message + '</p></div>';
-                $('#ajax_form').before(errorHtml);
-                console.error('❌ Error:', response.data.message);
+                submitButton.prop('disabled', false);
+                buttonLabel.text(originalButtonText);
+                $('#ajax_form').before(
+                    '<div class="ygc-notice notice notice-error is-dismissible"><p>' + response.data.message + '</p></div>'
+                );
             }
-        }).fail(function(xhr, status, error) {
-            submitButton.prop('disabled', false).text(originalButtonText);
-            var errorHtml = '<div class="ygc-notice notice notice-error is-dismissible" style="margin: 20px 0;"><p>Error saving settings. Please try again.</p></div>';
-            $('#ajax_form').before(errorHtml);
-            console.error('❌ AJAX Error:', error);
+        }).fail(function () {
+            submitButton.prop('disabled', false);
+            buttonLabel.text(originalButtonText);
+            $('#ajax_form').before(
+                '<div class="ygc-notice notice notice-error is-dismissible"><p>Error saving settings. Please try again.</p></div>'
+            );
         });
     });
+
+    // --- Demo video tabs: only the visible tab's iframe is loaded -------
+
+    $('.ygc-tab').on('click', function () {
+        var tab = $(this).data('tab');
+        if ($(this).hasClass('is-active')) {
+            return;
+        }
+
+        $('.ygc-tab').removeClass('is-active').attr('aria-selected', 'false');
+        $(this).addClass('is-active').attr('aria-selected', 'true');
+
+        $('.ygc-video').each(function () {
+            var panel = $(this);
+            var iframe = panel.find('iframe');
+            var active = panel.data('tab') === tab;
+
+            panel.toggleClass('is-active', active).prop('hidden', !active);
+            panel.find('.ygc-video__end').prop('hidden', true);
+
+            if (active) {
+                if (!iframe.attr('src')) {
+                    iframe.attr('src', iframe.data('src'));
+                }
+                attachPlayer(panel);
+            } else if (iframe.attr('src')) {
+                // Unload so a playing video stops when its tab is hidden
+                detachPlayer(panel);
+                iframe.data('src', iframe.attr('src')).removeAttr('src');
+            }
+        });
+
+        $('.ygc-video__more').each(function () {
+            $(this).prop('hidden', $(this).data('tab') !== tab);
+        });
+    });
+
+    // --- End-of-Short prompt (YouTube IFrame API) ------------------------
+    // When a Short finishes we overlay a "Watch full tutorial" card. Loads the
+    // API only if the video card is actually on the page.
+
+    var ytReady = false;
+
+    function attachPlayer(panel) {
+        var iframe = panel.find('iframe').get(0);
+        if (!iframe || !ytReady || panel.data('ytPlayer')) {
+            return;
+        }
+        var player = new YT.Player(iframe, {
+            events: {
+                onStateChange: function (e) {
+                    var overlay = panel.find('.ygc-video__end');
+                    if (e.data === YT.PlayerState.ENDED) {
+                        overlay.prop('hidden', false);
+                    } else if (e.data === YT.PlayerState.PLAYING) {
+                        overlay.prop('hidden', true);
+                    }
+                }
+            }
+        });
+        panel.data('ytPlayer', player);
+    }
+
+    function detachPlayer(panel) {
+        var player = panel.data('ytPlayer');
+        if (player && typeof player.destroy === 'function') {
+            // destroy() removes the iframe; re-create a bare one so the tab can reload later
+            var src = panel.find('iframe').attr('src') || panel.find('iframe').data('src');
+            var title = panel.find('iframe').attr('title');
+            player.destroy();
+            $('<iframe>', {
+                'data-src': src,
+                title: title,
+                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+                referrerpolicy: 'strict-origin-when-cross-origin',
+                allowfullscreen: 'allowfullscreen',
+                loading: 'lazy'
+            }).prependTo(panel);
+        }
+        panel.removeData('ytPlayer');
+    }
+
+    $('.ygc-video').on('click', '.ygc-video__replay', function () {
+        var panel = $(this).closest('.ygc-video');
+        var player = panel.data('ytPlayer');
+        panel.find('.ygc-video__end').prop('hidden', true);
+        if (player) {
+            player.seekTo(0);
+            player.playVideo();
+        }
+    });
+
+    if ($('.ygc-video').length) {
+        // Chain rather than clobber, in case another plugin on this screen also uses the API
+        var previousReady = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = function () {
+            if (typeof previousReady === 'function') {
+                previousReady();
+            }
+            ytReady = true;
+            attachPlayer($('.ygc-video.is-active'));
+        };
+        if (window.YT && window.YT.Player) {
+            window.onYouTubeIframeAPIReady();
+        } else {
+            $('<script>', { src: 'https://www.youtube.com/iframe_api', async: true }).appendTo('head');
+        }
+    }
 })
